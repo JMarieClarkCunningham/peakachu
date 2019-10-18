@@ -1,16 +1,9 @@
-from __future__ import print_function
 import os
 import numpy as np
 import matplotlib.pyplot as plt
-import matplotlib.ticker as ticker
-import matplotlib
-#matplotlib.rcParams['text.usetex'] = True
 from matplotlib.ticker import MultipleLocator
 from astropy.io import fits
 from astropy.time import Time
-from PyAstronomy import pyasl
-from scipy import ndimage
-import pandas as pd
 import gaussfitter as gf
 '''
 This is a truncated version of the BF_python.py software by Meredith Rawls
@@ -33,6 +26,16 @@ ccfpeakout: a output .txt file created with # columns: [CCFRV1, CCFRV1_err,
 '''
 
 
+def gaussbetter(gausspars, CCFvalues, CCFxaxis, CCFerrors, ngauss=2):
+    '''
+    Fit 2 gaussians to some data, astropy style.
+
+    Unlike gaussparty, this fits one visit at a time.
+    '''
+    # words
+    pass
+
+
 def gaussparty(gausspars, nspec, CCFvaluelist, CCFxaxis, error_array, ngauss=2,
                fixed=[False, False, False],
                limitedmin=[False, False, True],
@@ -40,7 +43,7 @@ def gaussparty(gausspars, nspec, CCFvaluelist, CCFxaxis, error_array, ngauss=2,
                minpars=[0, 0, 0], maxpars=[0, 0, 0]):
     '''
     Fit 2 gaussians to some data.
-    
+
     Parameters
     ----------
     gausspars : `str`
@@ -65,7 +68,7 @@ def gaussparty(gausspars, nspec, CCFvaluelist, CCFxaxis, error_array, ngauss=2,
     Returns
     -------
     gaussfitlist : `list`
-        
+        2D list of results from calling multigaussfit
     '''
     assert len(CCFvaluelist) == nspec
     assert len(CCFxaxis) == nspec
@@ -75,14 +78,11 @@ def gaussparty(gausspars, nspec, CCFvaluelist, CCFxaxis, error_array, ngauss=2,
     with open(gausspars) as f1:
         for line in f1:
             if line[0] != '#':
-                param.append( line.rstrip() )
+                param.append(line.rstrip())
 
     assert len(param) == nspec
-    
+
     gaussfitlist = []
-    gauss1 = [[] for i in range(nspec)]
-    gauss2 = [[] for i in range(nspec)]
-    #error_array = np.ones(len(CCFvaluelist[0]))*0.01 # dummy array with 0.01 error values
     print(' ')
     print('Gaussian fit results: peak amplitude, width, rvraw, rvraw_err')
     print ('-------------------------------------------------------------')
@@ -94,18 +94,25 @@ def gaussparty(gausspars, nspec, CCFvaluelist, CCFxaxis, error_array, ngauss=2,
             partest = param[i].split()
         partest = [float(item) for item in partest]
         gaussfit = gf.multigaussfit(CCFxaxis[i], CCFvaluelist[i], ngauss=ngauss,
-                params=partest, err=error_array[i], fixed=fixed,
-                limitedmin=limitedmin, limitedmax=limitedmax,
-                minpars=minpars, maxpars=maxpars,
-                quiet=True, shh=True, veryverbose=False)
+                                    params=partest, err=error_array[i], fixed=fixed,
+                                    limitedmin=limitedmin, limitedmax=limitedmax,
+                                    minpars=minpars, maxpars=maxpars,
+                                    quiet=True, shh=True, veryverbose=False)
         gaussfitlist.append(gaussfit)
         print('{0:.3f} {1:.2f} {2:.4f} {3:.4f} \t {4:.3f} {5:.2f} {6:.4f} {7:.4f}'.format(
-            gaussfit[0][0], gaussfit[0][2], gaussfit[0][1], gaussfit[2][1],
-            gaussfit[0][3], gaussfit[0][5], gaussfit[0][4], gaussfit[2][4]))
+              gaussfit[0][0], gaussfit[0][2], gaussfit[0][1], gaussfit[2][1],
+              gaussfit[0][3], gaussfit[0][5], gaussfit[0][4], gaussfit[2][4]))
     return gaussfitlist
 
 
-#KIC = '6131659'
+def gaussian(x, amp, mu, sig):  # i.e., (xarray, amp, rv, width)
+    '''
+    Handy little gaussian function maker
+    '''
+    return amp * np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
+
+
+# KIC = '6131659'
 KIC = '6864859'
 gausspars = os.path.join(KIC, KIC+'gaussparsCCF.txt')
 outfile = os.path.join(KIC, KIC+'ccfpeakout.txt')
@@ -115,13 +122,13 @@ if KIC == '6131659':
     windowcols = 7
     nspec = 27
     ccfinfile = os.path.join(KIC, 'apStar-r8-2M19370697+4126128.fits')
-    #BCVfile = '6131659bjdinfile.txt'
+    # BCVfile = '6131659bjdinfile.txt'
 elif KIC == '6864859':
     windowrows = 4
     windowcols = 7
     nspec = 25  # KIC 6864859 has 25 visits...
     ccfinfile = os.path.join(KIC, 'apStar-r6-2M19292405+4223363.fits')
-    #BCVfile = '6131659bjdinfile.txt'
+    # BCVfile = '6131659bjdinfile.txt'
 else:
     raise NotImplementedError()
 
@@ -144,42 +151,47 @@ ccftimesAstropy = []
 for ccftime in ccftimes:
     ccftimesAstropy.append(Time(ccftime, scale='utc', format='jd'))
 
-#keplerDateOffset = 2454833.  # maybe useful for plots
-
 # Optional initial plot of CCFs
 doInitialPlot = False
 
 if doInitialPlot:
     rvneg = -300
     rvpos = 300
-    fig = plt.figure(1, figsize=(12,6))
+    fig = plt.figure(1, figsize=(12, 6))
     ax = fig.add_subplot(111)
-    plt.axis([rvneg, rvpos, -0.2, float(nspec)+1])
+    plt.axis([rvneg, rvpos, -0.2, float(nspec) + 1])
     axlims = [-140, 140, -0.06, 0.56]
     ccfyoffset = 0
     yoffset = 0
     for idx, CCFdata in enumerate(CCFvalues):
-        ax0 = fig.add_subplot(windowrows, windowcols, idx+1)
+        ax0 = fig.add_subplot(windowrows, windowcols, idx + 1)
         plt.axis(axlims)
         plt.plot(CCF_rvaxis[idx], CCFvalues[idx] + ccfyoffset)
         plt.text(23, 0.5, ccftimesAstropy[idx].iso[0:10], size=10)
-        #plt.axhline(y=yoffset, color=colors[15], ls=':')
+        # plt.axhline(y=yoffset, color=colors[15], ls=':')
         plt.subplots_adjust(wspace=0, hspace=0)
         yoffset = yoffset + 1.0
     plt.show()
 
-#################     FIT PEAKS WITH TWO OR MORE GAUSSIANS     #################
-# IMPORTANT: You must have fairly decent guesses in the gausspars file for the #
-# following code to work. Otherwise, this will fail and resultant outputs will #
-# look terrible. 
+# IMPORTANT: You must have fairly decent guesses in the gausspars file for the
+# following code to work. Otherwise, this will fail and resultant outputs will
+# look terrible.
+
+# Time to fit the peaks
 
 peakfitlist = gaussparty(gausspars, nspec, CCFvalues, CCF_rvaxis, CCFerrors)
-#print(peakfitlist) #prints the peak fitting results
-rvraw1 = []; rvraw2 = []; rvraw1_err = []; rvraw2_err = []
-amp1 = []; amp2 = []; width1 = []; width2 = []
+
+rvraw1 = []
+rvraw2 = []
+rvraw1_err = []
+rvraw2_err = []
+amp1 = []
+amp2 = []
+width1 = []
+width2 = []
 for peakfit in peakfitlist:
-    rvraw1.append(peakfit[0][1]) # indices are [parameter, BF, error array][amp,rv,width x N]
-    rvraw2.append(peakfit[0][4]) # [0,1,2] is amp,rv,width for star1; [3,4,5] is same for star2, etc.
+    rvraw1.append(peakfit[0][1])  # indices are [parameter, BF, error array][amp,rv,width x N]
+    rvraw2.append(peakfit[0][4])  # [0,1,2] is amp,rv,width for star1; [3,4,5] is same for star2, etc.
     rvraw1_err.append(peakfit[2][1])
     rvraw2_err.append(peakfit[2][4])
     amp1.append(peakfit[0][0])
@@ -187,14 +199,8 @@ for peakfit in peakfitlist:
     width1.append(peakfit[0][2])
     width2.append(peakfit[0][5])
 
-#print(rvraw1, amp1, width1)
-
-# handy little gaussian function maker
-def gaussian(x, amp, mu, sig): # i.e., (xarray, amp, rv, width)
-    return amp * np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
-
 # Plotting time
-fig = plt.figure(1, figsize=(12,6))
+fig = plt.figure(1, figsize=(12, 6))
 ax = fig.add_subplot(111)
 ax.tick_params(top=False, bottom=False, left=False, right=False)
 ax.axes.xaxis.set_ticklabels([])
@@ -212,10 +218,10 @@ ymin = -0.2
 ymax = 0.8
 
 for i in range(0, nspec):
-    ax = fig.add_subplot(windowrows, windowcols, i+1)  # out of range if windowcols x windowrows < nspec
+    ax = fig.add_subplot(windowrows, windowcols, i + 1)  # out of range if windowcols x windowrows < nspec
     ax.yaxis.set_major_locator(MultipleLocator(0.4))  # increments of tick marks
     ax.xaxis.set_major_locator(MultipleLocator(80))
-    if (i!=0 and i!=7 and i!=14 and i!=21):
+    if (i != 0 and i != 7 and i != 14 and i != 21):  # this is a function of windowcols!
         ax.set_yticklabels(())
     if i < nspec-windowcols:
         ax.set_xticklabels(())
@@ -229,16 +235,16 @@ for i in range(0, nspec):
     plt.plot(CCF_rvaxis[i], peakfitlist[i][1], color='C0', lw=2, ls='-', label='Two Gaussian fit')
     gauss1 = gaussian(CCF_rvaxis[i], amp1[i], rvraw1[i], width1[i])
     gauss2 = gaussian(CCF_rvaxis[i], amp2[i], rvraw2[i], width2[i])
-    plt.plot(rvraw1[i], 0.1, color='C3', marker='|', ms=15)#, label='RV 1')
-    plt.plot(rvraw2[i], 0.1, color='C1', marker='|', ms=15)#, label='RV 2')
-    plt.plot(CCF_rvaxis[i], gauss1, color='C3', lw=3, ls='--')#, label='Gaussian fit 1')
-    plt.plot(CCF_rvaxis[i], gauss2, color='C1', lw=3, ls='--')#, label='Gaussian fit 2')
-    #plt.axvline(x=0, color=colors[15])  # optional vertical line at 0
+    plt.plot(rvraw1[i], 0.1, color='C3', marker='|', ms=15)
+    plt.plot(rvraw2[i], 0.1, color='C1', marker='|', ms=15)
+    plt.plot(CCF_rvaxis[i], gauss1, color='C3', lw=3, ls='--')
+    plt.plot(CCF_rvaxis[i], gauss2, color='C1', lw=3, ls='--')
+    # plt.axvline(x=0, color=colors[15])  # optional vertical line at 0
 
     # in this situation, the legend is printed to the right of the final subplot
     if i == nspec-1:
-        ax.legend(bbox_to_anchor=(2.6,0.6), loc=1, borderaxespad=0.,
-                  frameon=False, handlelength=2, prop={'size':12})
+        ax.legend(bbox_to_anchor=(2.6, 0.6), loc=1, borderaxespad=0.,
+                  frameon=False, handlelength=2, prop={'size': 12})
 
 plt.show()
-plt.savefig('6131659prelim.jpg')
+plt.savefig(KIC + 'prelim.jpg')
