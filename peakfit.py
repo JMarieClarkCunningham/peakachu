@@ -5,6 +5,7 @@ from matplotlib.ticker import MultipleLocator
 from astropy.io import fits
 from astropy.time import Time
 import gaussfitter as gf
+from astropy.modeling import models, fitting
 '''
 This is a truncated version of the BF_python.py software by Meredith Rawls
 to fit Gaussians via the method of least squares to BF and CCF peaks.
@@ -26,14 +27,18 @@ ccfpeakout: a output .txt file created with # columns: [CCFRV1, CCFRV1_err,
 '''
 
 
-def gaussbetter(gausspars, CCFvalues, CCFxaxis, CCFerrors, ngauss=2):
+def gaussbetter(pars, CCFvalues, CCFxaxis, CCFerrors, ngauss=2):
     '''
     Fit 2 gaussians to some data, astropy style.
 
     Unlike gaussparty, this fits one visit at a time.
     '''
-    # words
-    pass
+    g1 = models.Gaussian1D(pars[0], pars[1], pars[2])  # amp, position, stddev
+    g2 = models.Gaussian1D(pars[3], pars[4], pars[5])  # amp, position, stddev
+    gg_init = g1 + g2
+    fitter = fitting.SLSQPLSQFitter()
+    gg_fit = fitter(gg_init, CCFxaxis, CCFvalues)
+    return gg_fit
 
 
 def gaussparty(gausspars, nspec, CCFvaluelist, CCFxaxis, error_array, ngauss=2,
@@ -111,9 +116,12 @@ def gaussian(x, amp, mu, sig):  # i.e., (xarray, amp, rv, width)
     '''
     return amp * np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
 
+# THIS IS WHERE YOU CHANGE THINGS
 
 # KIC = '6131659'
 KIC = '6864859'
+#fitter = 'astropy'
+fitter = 'gaussfitter'  # default for now...
 gausspars = os.path.join(KIC, KIC+'gaussparsCCF.txt')
 outfile = os.path.join(KIC, KIC+'ccfpeakout.txt')
 
@@ -179,7 +187,40 @@ if doInitialPlot:
 
 # Time to fit the peaks
 
-peakfitlist = gaussparty(gausspars, nspec, CCFvalues, CCF_rvaxis, CCFerrors)
+if fitter == 'gaussfitter':
+    peakfitlist = gaussparty(gausspars, nspec, CCFvalues, CCF_rvaxis, CCFerrors)
+
+elif fitter == 'astropy':
+    # WORK IN PROGRESS this doesn't work yet
+    peakfitlist = []
+    param = []
+    with open(gausspars) as f1:
+        for line in f1:
+            if line[0] != '#':
+                param.append(line.rstrip())
+    assert len(param) == nspec
+    partestlist = []
+    for par in param:
+        if '#' in par:
+            commentbegin = par.find('#')
+            partest = par[0:commentbegin].split()
+        else:
+            partest = par.split()
+        partest = [float(item) for item in partest]
+        partestlist.append(partest)
+    for idx in range(0, nspec):
+        pars = partestlist[idx]
+        print(pars)
+        result = gaussbetter(pars, CCFvalues[idx], CCF_rvaxis[idx], CCFerrors[idx], ngauss=2)
+        peakfitlist.append(result)
+        #plt.figure()
+        #plt.plot(CCF_rvaxis[idx], result(CCF_rvaxis[idx]))
+        #plt.show
+
+else:
+    raise NotImplementedError()
+
+# print(peakfitlist)
 
 rvraw1 = []
 rvraw2 = []
