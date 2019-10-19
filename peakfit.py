@@ -31,10 +31,12 @@ def gaussbetter(pars, CCFvalues, CCFxaxis, CCFerrors, ngauss=2):
     '''
     Fit 2 gaussians to some data, astropy style.
 
-    Unlike gaussparty, this fits one visit at a time.
+    Unlike gaussparty, this fits one visit at a time. I should finish this docstring.
     '''
-    g1 = models.Gaussian1D(pars[0], pars[1], pars[2])  # amp, position, stddev
-    g2 = models.Gaussian1D(pars[3], pars[4], pars[5])  # amp, position, stddev
+    g1 = models.Gaussian1D(pars[0], pars[1], pars[2], fixed={'stddev': True})
+    # the parameter order is amp, mean (aka position aka RV), stddev
+    # as written, the widths are not fit, and are held fixed at the input values
+    g2 = models.Gaussian1D(pars[3], pars[4], pars[5], fixed={'stddev': True})
     gg_init = g1 + g2
     fitter = fitting.SLSQPLSQFitter()
     gg_fit = fitter(gg_init, CCFxaxis, CCFvalues)
@@ -120,8 +122,8 @@ def gaussian(x, amp, mu, sig):  # i.e., (xarray, amp, rv, width)
 
 # KIC = '6131659'
 KIC = '6864859'
-#fitter = 'astropy'
-fitter = 'gaussfitter'  # default for now...
+fitter = 'astropy'
+# fitter = 'gaussfitter'
 gausspars = os.path.join(KIC, KIC+'gaussparsCCF.txt')
 outfile = os.path.join(KIC, KIC+'ccfpeakout.txt')
 
@@ -189,11 +191,38 @@ if doInitialPlot:
 
 if fitter == 'gaussfitter':
     peakfitlist = gaussparty(gausspars, nspec, CCFvalues, CCF_rvaxis, CCFerrors)
+    rvraw1 = []
+    rvraw2 = []
+    rvraw1_err = []
+    rvraw2_err = []
+    amp1 = []
+    amp2 = []
+    width1 = []
+    width2 = []
+    for peakfit in peakfitlist:
+        rvraw1.append(peakfit[0][1])  # indices are [parameter, BF, error array][amp,rv,width x N]
+        rvraw2.append(peakfit[0][4])  # [0,1,2] is amp,rv,width for star1; [3,4,5] is same for star2, etc.
+        rvraw1_err.append(peakfit[2][1])
+        rvraw2_err.append(peakfit[2][4])
+        amp1.append(peakfit[0][0])
+        amp2.append(peakfit[0][3])
+        width1.append(peakfit[0][2])
+        width2.append(peakfit[0][5])
+    bestFitModelList = []
+    for i in range(0, nspec):
+        bestFitModelList.append(peakfitlist[i][1])
 
 elif fitter == 'astropy':
-    # WORK IN PROGRESS this doesn't work yet
-    peakfitlist = []
+    bestFitModelList = []
     param = []
+    rvraw1 = []
+    rvraw2 = []
+    # rvraw1_err = []
+    # rvraw2_err = []
+    amp1 = []
+    amp2 = []
+    width1 = []
+    width2 = []
     with open(gausspars) as f1:
         for line in f1:
             if line[0] != '#':
@@ -210,35 +239,27 @@ elif fitter == 'astropy':
         partestlist.append(partest)
     for idx in range(0, nspec):
         pars = partestlist[idx]
-        print(pars)
-        result = gaussbetter(pars, CCFvalues[idx], CCF_rvaxis[idx], CCFerrors[idx], ngauss=2)
-        peakfitlist.append(result)
-        #plt.figure()
-        #plt.plot(CCF_rvaxis[idx], result(CCF_rvaxis[idx]))
-        #plt.show
+        result = gaussbetter(pars, CCFvalues[idx],
+                             CCF_rvaxis[idx], CCFerrors[idx], ngauss=2)
+        bestFitModel = result(CCF_rvaxis[idx])
+        bestFitModelList.append(bestFitModel)
+        rvraw1.append(result.mean_0)
+        rvraw2.append(result.mean_1)
+        # rvraw1_err.append(result.SOMETHING???)  # TODO: get errors on fit parameters
+        # rvraw2_err.append(result.SOMETHING???)
+        amp1.append(result.amplitude_0)
+        amp2.append(result.amplitude_1)
+        width1.append(result.stddev_0)
+        width2.append(result.stddev_1)
+        # print(dir(result))
+        # print(result.mean_0)
+        # print(result.outputs)
+        # print(result)
+        # TODO: print parameter fit results to screen like gaussparty does
 
 else:
     raise NotImplementedError()
 
-# print(peakfitlist)
-
-rvraw1 = []
-rvraw2 = []
-rvraw1_err = []
-rvraw2_err = []
-amp1 = []
-amp2 = []
-width1 = []
-width2 = []
-for peakfit in peakfitlist:
-    rvraw1.append(peakfit[0][1])  # indices are [parameter, BF, error array][amp,rv,width x N]
-    rvraw2.append(peakfit[0][4])  # [0,1,2] is amp,rv,width for star1; [3,4,5] is same for star2, etc.
-    rvraw1_err.append(peakfit[2][1])
-    rvraw2_err.append(peakfit[2][4])
-    amp1.append(peakfit[0][0])
-    amp2.append(peakfit[0][3])
-    width1.append(peakfit[0][2])
-    width2.append(peakfit[0][5])
 
 # Plotting time
 fig = plt.figure(1, figsize=(12, 6))
@@ -271,15 +292,14 @@ for i in range(0, nspec):
     plt.tick_params(axis='both', which='major')
     plt.text(xmax - 0.19*(np.abs(xmax-xmin)), 0.60*ymax, i)
     plt.text(xmax - 0.6*(np.abs(xmax-xmin)), 0.8*ymax, '%s' % (ccftimesAstropy[i].iso[0:10]), size='small')
-
     plt.plot(CCF_rvaxis[i], CCFvalues[i], color='0.5', lw=2, ls='-', label='ApStar CCFs')
-    plt.plot(CCF_rvaxis[i], peakfitlist[i][1], color='C0', lw=2, ls='-', label='Two Gaussian fit')
+    plt.plot(CCF_rvaxis[i], bestFitModelList[i], color='C0', lw=2, ls='-', label='Two Gaussian fit')
     gauss1 = gaussian(CCF_rvaxis[i], amp1[i], rvraw1[i], width1[i])
     gauss2 = gaussian(CCF_rvaxis[i], amp2[i], rvraw2[i], width2[i])
-    plt.plot(rvraw1[i], 0.1, color='C3', marker='|', ms=15)
-    plt.plot(rvraw2[i], 0.1, color='C1', marker='|', ms=15)
     plt.plot(CCF_rvaxis[i], gauss1, color='C3', lw=3, ls='--')
     plt.plot(CCF_rvaxis[i], gauss2, color='C1', lw=3, ls='--')
+    plt.plot(rvraw1[i], 0.1, color='C3', marker='|', ms=15)
+    plt.plot(rvraw2[i], 0.1, color='C1', marker='|', ms=15)
     # plt.axvline(x=0, color=colors[15])  # optional vertical line at 0
 
     # in this situation, the legend is printed to the right of the final subplot
