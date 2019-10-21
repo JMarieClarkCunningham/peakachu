@@ -1,0 +1,6 @@
+# Peaks fitted with peakfit.py, using astropy fitter
+# Gaussian fit guesses (gausspars):   6864859/6864859gaussparsCCF.txt
+# -------------------------------------------------------
+# RV1 [km/s], error1 [km/s], RV2 [km/s], error2 [km/s]
+# -------------------------------------------------------
+#

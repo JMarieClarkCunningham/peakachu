@@ -42,7 +42,6 @@ def gaussbetter(pars, CCFvalues, CCFxaxis, CCFerrors, ngauss=2):
     gg_fit = fitter(gg_init, CCFxaxis, CCFvalues)
     return gg_fit
 
-
 def gaussparty(gausspars, nspec, CCFvaluelist, CCFxaxis, error_array, ngauss=2,
                fixed=[False, False, False],
                limitedmin=[False, False, True],
@@ -245,21 +244,43 @@ elif fitter == 'astropy':
         bestFitModelList.append(bestFitModel)
         rvraw1.append(result.mean_0)
         rvraw2.append(result.mean_1)
-        # rvraw1_err.append(result.SOMETHING???)  # TODO: get errors on fit parameters
-        # rvraw2_err.append(result.SOMETHING???)
+        #rvraw1_err.append(result.SOMETHING???)  # TODO: get errors on fit parameters
+        #rvraw2_err.append(result.SOMETHING???)
         amp1.append(result.amplitude_0)
         amp2.append(result.amplitude_1)
         width1.append(result.stddev_0)
         width2.append(result.stddev_1)
-        # print(dir(result))
-        # print(result.mean_0)
-        # print(result.outputs)
-        # print(result)
+        #print(dir(result))
+        #print(result.mean_0)
+        #print(result.outputs)
+        #print(result)
         # TODO: print parameter fit results to screen like gaussparty does
 
 else:
     raise NotImplementedError()
 
+# Print fitting results to the outfile
+dash = '-' * 55
+g2 = open(outfile, 'w')
+print('# Peaks fitted with peakfit.py, using {0} fitter'.format(fitter), file = g2)
+print('# Gaussian fit guesses (gausspars):   {0}'.format(gausspars), file=g2)
+#print('# amplitude 1: {0}, width 1:{1}, amplitude 2: {2}, width 2: {3}'.format(amp1, width1, amp2, width2), file=g2)
+#print('#', file=g2)
+print('#', dash, file = g2)
+print('# RV1 [km/s], error1 [km/s], RV2 [km/s], error2 [km/s]', file = g2)
+print('#', dash, file = g2)
+#print(rvraw1)
+# Loop over for each CCF
+for i in range (0, nspec):
+    #print('RV1{0}, RV2{1}'.format(rvraw1[i][1], rvraw2[i][2]), file = g2)
+
+    #print (rvraw1[0][i], rvraw1_err[1][i], rvraw2[2][i], rvraw2_err[3][i], file=g2)
+    #print(rvraw1[i], rvraw2[i], file=g2)
+    print (result.mean_0, result.mean_1, result.outputs)
+
+print('#', file=g2)
+print('Gaussian fit results printed to {0}'.format(outfile))
+g2.close()
 
 # Plotting time
 fig = plt.figure(1, figsize=(12, 6))
