@@ -42,6 +42,7 @@ def gaussbetter(pars, CCFvalues, CCFxaxis, CCFerrors, ngauss=2):
     gg_fit = fitter(gg_init, CCFxaxis, CCFvalues)
     return gg_fit
 
+
 def gaussparty(gausspars, nspec, CCFvaluelist, CCFxaxis, error_array, ngauss=2,
                fixed=[False, False, False],
                limitedmin=[False, False, True],
@@ -216,8 +217,8 @@ elif fitter == 'astropy':
     param = []
     rvraw1 = []
     rvraw2 = []
-    # rvraw1_err = []
-    # rvraw2_err = []
+    rvraw1_err = []
+    rvraw2_err = []
     amp1 = []
     amp2 = []
     width1 = []
@@ -242,45 +243,31 @@ elif fitter == 'astropy':
                              CCF_rvaxis[idx], CCFerrors[idx], ngauss=2)
         bestFitModel = result(CCF_rvaxis[idx])
         bestFitModelList.append(bestFitModel)
-        rvraw1.append(result.mean_0)
-        rvraw2.append(result.mean_1)
-        #rvraw1_err.append(result.SOMETHING???)  # TODO: get errors on fit parameters
-        #rvraw2_err.append(result.SOMETHING???)
-        amp1.append(result.amplitude_0)
-        amp2.append(result.amplitude_1)
-        width1.append(result.stddev_0)
-        width2.append(result.stddev_1)
-        #print(dir(result))
-        #print(result.mean_0)
-        #print(result.outputs)
-        #print(result)
-        # TODO: print parameter fit results to screen like gaussparty does
+        rvraw1.append(result.mean_0.value)
+        rvraw2.append(result.mean_1.value)
+        # rvraw1_err.append(result.SOMETHING???)  # TODO: get errors on fit parameters
+        # rvraw2_err.append(result.SOMETHING???)
+        rvraw1_err.append(0)  # DELETE THIS LATER
+        rvraw2_err.append(0)  # DELETE THIS LATER
+        amp1.append(result.amplitude_0.value)
+        amp2.append(result.amplitude_1.value)
+        width1.append(result.stddev_0.value)
+        width2.append(result.stddev_1.value)
 
 else:
     raise NotImplementedError()
 
-# Print fitting results to the outfile
-dash = '-' * 55
-g2 = open(outfile, 'w')
-print('# Peaks fitted with peakfit.py, using {0} fitter'.format(fitter), file = g2)
-print('# Gaussian fit guesses (gausspars):   {0}'.format(gausspars), file=g2)
-#print('# amplitude 1: {0}, width 1:{1}, amplitude 2: {2}, width 2: {3}'.format(amp1, width1, amp2, width2), file=g2)
-#print('#', file=g2)
-print('#', dash, file = g2)
-print('# RV1 [km/s], error1 [km/s], RV2 [km/s], error2 [km/s]', file = g2)
-print('#', dash, file = g2)
-#print(rvraw1)
-# Loop over for each CCF
-for i in range (0, nspec):
-    #print('RV1{0}, RV2{1}'.format(rvraw1[i][1], rvraw2[i][2]), file = g2)
-
-    #print (rvraw1[0][i], rvraw1_err[1][i], rvraw2[2][i], rvraw2_err[3][i], file=g2)
-    #print(rvraw1[i], rvraw2[i], file=g2)
-    print (result.mean_0, result.mean_1, result.outputs)
-
-print('#', file=g2)
-print('Gaussian fit results printed to {0}'.format(outfile))
-g2.close()
+# Print fit results to the outfile
+with open(outfile, 'w') as f2:
+    print('# time [JD], RV1 [km/s], error1 [km/s], RV2 [km/s], error2 [km/s]', file=f2)
+    print('#', file=f2)
+    for i in range(1, nspec):
+        print ('{0:.9f} {1:.5f} {2:.5f} {3:.5f} {4:.5f}'.format(ccftimesAstropy[i].jd,
+                                                                rvraw1[i],
+                                                                rvraw1_err[i],
+                                                                rvraw2[i],
+                                                                rvraw2_err[i]), file=f2)
+print('Time and RVs written to %s.' % outfile)
 
 # Plotting time
 fig = plt.figure(1, figsize=(12, 6))
