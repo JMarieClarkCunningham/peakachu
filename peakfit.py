@@ -271,12 +271,12 @@ else:
 with open(outfile, 'w') as f2:
     print('# time [JD], RV1 [km/s], error1 [km/s], RV2 [km/s], error2 [km/s]', file=f2)
     print('#', file=f2)
-    for i in range(1, nspec): #used to be: for i in range(1, nspec)
-        print ('{0:.9f} {1:.5f} {2:.5f} {3:.5f} {4:.5f}'.format(ccftimesAstropy[i].jd,
-                                                                rvraw1[i],
-                                                                rvraw1_err[i],
-                                                                rvraw2[i],
-                                                                rvraw2_err[i]), file=f2)
+    for idx in range(idx, nspec): #used to be: for i in range(1, nspec)
+        print ('{0:.9f} {1:.5f} {2:.5f} {3:.5f} {4:.5f}'.format(ccftimesAstropy[idx].jd,
+                                                                rvraw1[idx],
+                                                                rvraw1_err[idx],
+                                                                rvraw2[idx],
+                                                                rvraw2_err[idx]), file=f2)
 print('Time and RVs written to %s.' % outfile)
 
 # Plotting time
@@ -297,31 +297,31 @@ xmax = 120
 ymin = -0.2
 ymax = 0.8
 
-for i in range(0, nspec):
-    ax = fig.add_subplot(windowrows, windowcols, i + 1)  # out of range if windowcols x windowrows < nspec
+for idx in range(idx, nspec):
+    ax = fig.add_subplot(windowrows, windowcols, idx + 1)  # out of range if windowcols x windowrows < nspec
     ax.yaxis.set_major_locator(MultipleLocator(0.4))  # increments of tick marks
     ax.xaxis.set_major_locator(MultipleLocator(80))
-    if (i != 0 and i != 7 and i != 14 and i != 21):  # this is a function of windowcols!
+    if (idx != 0 and idx != 7 and idx != 14 and idx != 21):  # this is a function of windowcols!
         ax.set_yticklabels(())
-    if i < nspec-windowcols:
+    if idx < nspec-windowcols:
         ax.set_xticklabels(())
     plt.subplots_adjust(wspace=0, hspace=0.0, bottom=0.1)
     plt.axis([xmin, xmax, ymin, ymax])
     plt.tick_params(axis='both', which='major')
-    plt.text(xmax - 0.19*(np.abs(xmax-xmin)), 0.60*ymax, i)
-    plt.text(xmax - 0.6*(np.abs(xmax-xmin)), 0.8*ymax, '%s' % (ccftimesAstropy[i].iso[0:10]), size='small')
-    plt.plot(CCF_rvaxis[i], CCFvalues[i], color='0.5', lw=2, ls='-', label='ApStar CCFs')
-    plt.plot(CCF_rvaxis[i], bestFitModelList[i], color='C0', lw=2, ls='-', label='Two Gaussian fit')
-    gauss1 = gaussian(CCF_rvaxis[i], amp1[i], rvraw1[i], width1[i])
-    gauss2 = gaussian(CCF_rvaxis[i], amp2[i], rvraw2[i], width2[i])
-    plt.plot(CCF_rvaxis[i], gauss1, color='C3', lw=3, ls='--')
-    plt.plot(CCF_rvaxis[i], gauss2, color='C1', lw=3, ls='--')
-    plt.plot(rvraw1[i], 0.1, color='C3', marker='|', ms=15)
-    plt.plot(rvraw2[i], 0.1, color='C1', marker='|', ms=15)
+    plt.text(xmax - 0.19*(np.abs(xmax-xmin)), 0.60*ymax, idx)
+    plt.text(xmax - 0.6*(np.abs(xmax-xmin)), 0.8*ymax, '%s' % (ccftimesAstropy[idx].iso[0:10]), size='small')
+    plt.plot(CCF_rvaxis[idx], CCFvalues[idx], color='0.5', lw=2, ls='-', label='ApStar CCFs')
+    plt.plot(CCF_rvaxis[idx], bestFitModelList[idx], color='C0', lw=2, ls='-', label='Two Gaussian fit')
+    gauss1 = gaussian(CCF_rvaxis[idx], amp1[idx], rvraw1[idx], width1[idx])
+    gauss2 = gaussian(CCF_rvaxis[idx], amp2[idx], rvraw2[idx], width2[idx])
+    plt.plot(CCF_rvaxis[idx], gauss1, color='C3', lw=3, ls='--')
+    plt.plot(CCF_rvaxis[idx], gauss2, color='C1', lw=3, ls='--')
+    plt.plot(rvraw1[idx], 0.1, color='C3', marker='|', ms=15)
+    plt.plot(rvraw2[idx], 0.1, color='C1', marker='|', ms=15)
     # plt.axvline(x=0, color=colors[15])  # optional vertical line at 0
 
     # in this situation, the legend is printed to the right of the final subplot
-    if i == nspec-1:
+    if idx == nspec-1:
         ax.legend(bbox_to_anchor=(2.6, 0.6), loc=1, borderaxespad=0.,
                   frameon=False, handlelength=2, prop={'size': 12})
 
