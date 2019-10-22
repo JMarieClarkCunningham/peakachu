@@ -42,9 +42,8 @@ def gaussbetter(pars, CCFvalues, CCFxaxis, CCFerrors):
     gg_init = g1 + g2
     fitter = fitting.LevMarLSQFitter()#http://docs.astropy.org/en/stable/api/astropy.modeling.fitting.LevMarLSQFitter.html
     gg_fit = fitter(gg_init, CCFxaxis, CCFvalues, weights=1./np.array(CCFerrors))     #This fits the combined Gaussians (g1 + g2)
-    cov = fitter.fit_info['param_cov']
 
-    return gg_fit
+    return gg_fit, fitter #Maybe not having 'fitter' in the return was doin a heckin bamboozle? [JMC^2]
 
 
 def gaussparty(gausspars, nspec, CCFvaluelist, CCFxaxis, error_array, ngauss=2,
@@ -241,7 +240,7 @@ elif fitter == 'astropy':
             partest = par.split()
         partest = [float(item) for item in partest]
         partestlist.append(partest)
-    for idx in range(0, nspec):
+    for idx in range(idx, nspec):
         pars = partestlist[idx]
         result = gaussbetter(pars, CCFvalues[idx],
                              CCF_rvaxis[idx], CCFerrors[idx])
@@ -249,16 +248,17 @@ elif fitter == 'astropy':
         bestFitModelList.append(bestFitModel)
         rvraw1.append(result.mean_0.value)
         rvraw2.append(result.mean_1.value)
-        #cov = LevMarLSQFitter.fit_info['param_cov']
+        cov = result.fit_info['param_cov']
         parnames = [n for n in result.param_names if n not in ['stddev_0', 'stddev_1']]
         parvals = [v for (n, v) in zip(result.param_names, result.parameters) if n not in ['stddev_0', 'stddev_1']]
         for i, (name, value) in enumerate(zip(parnames, parvals)):
             print('{}: {} +/- {}'.format(name, value, np.sqrt(cov[i][i])))
-
-        # rvraw1_err.append(result.SOMETHING???)  # TODO: get errors on fit parameters
-        # rvraw2_err.append(result.SOMETHING???)
-        rvraw1_err.append(0)  # DELETE THIS LATER
-        rvraw2_err.append(0)  # DELETE THIS LATER
+            rvraw1_err.append(cov[1][1])
+            rvraw2_err.append(cov[3][3])
+        # rvraw1_err.append(cov[1][1])  # TODO: get errors on fit parameters
+        # rvraw2_err.append(cov[3][3])  # DONE: Ordering of covariance matrix with tied parameters astropy/issues/4521
+        # rvraw1_err.append(0)  # DELETE THIS LATER
+        # rvraw2_err.append(0)  # DELETE THIS LATER
         amp1.append(result.amplitude_0.value)
         amp2.append(result.amplitude_1.value)
         width1.append(result.stddev_0.value)
