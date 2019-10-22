@@ -248,36 +248,50 @@ elif fitter == 'astropy':
         bestFitModelList.append(bestFitModel)
         rvraw1.append(result.mean_0.value)
         rvraw2.append(result.mean_1.value)
+#        print('rvraw1 = ', rvraw1)     # Why don't these print statements print the thing?!
+#        print('rvraw2 = ', rvraw2)     # What even are loops? [JMC^2]
         cov = result.fit_info['param_cov']
         parnames = [n for n in result.param_names if n not in ['stddev_0', 'stddev_1']]
         parvals = [v for (n, v) in zip(result.param_names, result.parameters) if n not in ['stddev_0', 'stddev_1']]
         for i, (name, value) in enumerate(zip(parnames, parvals)):
             print('{}: {} +/- {}'.format(name, value, np.sqrt(cov[i][i])))
-            rvraw1_err.append(cov[1][1])
-            rvraw2_err.append(cov[3][3])
+            #rvraw1_err.append(cov[1][1])
+            #rvraw2_err.append(cov[3][3])
         # rvraw1_err.append(cov[1][1])  # TODO: get errors on fit parameters
         # rvraw2_err.append(cov[3][3])  # DONE: Ordering of covariance matrix with tied parameters astropy/issues/4521
-        # rvraw1_err.append(0)  # DELETE THIS LATER
-        # rvraw2_err.append(0)  # DELETE THIS LATER
+        rvraw1_err.append(0)  # DELETE THIS LATER
+        rvraw2_err.append(0)  # DELETE THIS LATER
         amp1.append(result.amplitude_0.value)
         amp2.append(result.amplitude_1.value)
         width1.append(result.stddev_0.value)
         width2.append(result.stddev_1.value)
 
+
+
 else:
     raise NotImplementedError()
+
+
 
 # Print fit results to the outfile
 with open(outfile, 'w') as f2:
     print('# time [JD], RV1 [km/s], error1 [km/s], RV2 [km/s], error2 [km/s]', file=f2)
     print('#', file=f2)
+# Print all the things! Find the source of the indexing error [JMC^2]
     for i in range(1, nspec):
-        print ('{0:.9f} {1:.5f} {2:.5f} {3:.5f} {4:.5f}'.format(ccftimesAstropy[i].jd,
-                                                                rvraw1[i],
-                                                                rvraw1_err[i],
-                                                                rvraw2[i],
-                                                                rvraw2_err[i]), file=f2)
-print('Time and RVs written to %s.' % outfile)
+        #print(ccftimesAstropy[i])
+        print(rvraw1[i])
+        #print(rvraw1_err[i])
+        #print(rvraw2[i])
+        #print(rvraw2_err[i])
+        #print('{0:.9f} {1:.5f}'.format(ccftimesAstropy[i].jd, rvraw1[i])) #rvraw1[i] appears to be causing indexing error
+#        print ('{0:.9f} {1:.5f} {2:.5f} {3:.5f} {4:.5f}'.format(ccftimesAstropy[i].jd,
+#                                                                rvraw1[i],
+#                                                                rvraw1_err[i],
+#                                                                rvraw2[i],
+#                                                                rvraw2_err[i]), file=f2)
+#print('Time and RVs written to %s.' % outfile)
+print('Nothing printed, everything is awful')
 
 # Plotting time
 fig = plt.figure(1, figsize=(12, 6))
