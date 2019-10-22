@@ -248,7 +248,7 @@ elif fitter == 'astropy':
         bestFitModelList.append(bestFitModel)
         rvraw1.append(result.mean_0.value)
         rvraw2.append(result.mean_1.value)
-#        print('rvraw1 = ', rvraw1)     # Why don't these print statements print the thing?!
+#        print('rvraw1 = ', rvraw1)     # Why don't these print statements print the thing?! [JMC^2]
 #        print('rvraw2 = ', rvraw2)     # What even are loops? [JMC^2]
         cov = result.fit_info['param_cov']
         parnames = [n for n in result.param_names if n not in ['stddev_0', 'stddev_1']]
@@ -265,6 +265,7 @@ elif fitter == 'astropy':
         amp2.append(result.amplitude_1.value)
         width1.append(result.stddev_0.value)
         width2.append(result.stddev_1.value)
+        #print('len(rvraw1) = ', len(rvraw1)) #[JMC^2] Doesn't print anything
 
 
 
@@ -272,15 +273,21 @@ else:
     raise NotImplementedError()
 
 
+#print('len(rvraw1) = ', len(rvraw1)) [JMC^2] Doesn't print anything
 
 # Print fit results to the outfile
 with open(outfile, 'w') as f2:
     print('# time [JD], RV1 [km/s], error1 [km/s], RV2 [km/s], error2 [km/s]', file=f2)
     print('#', file=f2)
+    print(rvraw1)
+    #print(rvraw1_err)
+    #print(rvraw2)
+    #print(rvraw2_err)
 # Print all the things! Find the source of the indexing error [JMC^2]
-    for i in range(1, nspec):
+    for i in range(0, nspec):
+        print('len(rvraw1) = ', len(rvraw1[0])) #[JMC^2] what even is your shape rvraw1 len(rvraw1) = 0, cuuute <(^.^<)
         #print(ccftimesAstropy[i])
-        print(rvraw1[i])
+        #print(rvraw1[i])
         #print(rvraw1_err[i])
         #print(rvraw2[i])
         #print(rvraw2_err[i])
@@ -291,7 +298,8 @@ with open(outfile, 'w') as f2:
 #                                                                rvraw2[i],
 #                                                                rvraw2_err[i]), file=f2)
 #print('Time and RVs written to %s.' % outfile)
-print('Nothing printed, everything is awful')
+print(rvraw1)
+print('Nothing printed, everything is awful') #Dramatic troubleshooting print statement is dramatic
 
 # Plotting time
 fig = plt.figure(1, figsize=(12, 6))
