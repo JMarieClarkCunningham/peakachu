@@ -40,8 +40,10 @@ def gaussbetter(pars, CCFvalues, CCFxaxis, CCFerrors):
     # the parameter order is amp, mean (aka position aka RV), stddev
     # as written, the widths are not fit, and are held fixed at the input values
     gg_init = g1 + g2
-    fitter = fitting.LevMarLSQFitter()                #http://docs.astropy.org/en/stable/api/astropy.modeling.fitting.LevMarLSQFitter.html
+    fitter = fitting.LevMarLSQFitter()#http://docs.astropy.org/en/stable/api/astropy.modeling.fitting.LevMarLSQFitter.html
     gg_fit = fitter(gg_init, CCFxaxis, CCFvalues, weights=1./np.array(CCFerrors))     #This fits the combined Gaussians (g1 + g2)
+    cov = fitter.fit_info['param_cov']#Should the cov calculation be here, instead??? [JMC^2]
+    return cov
     return gg_fit
 
 
@@ -239,7 +241,7 @@ elif fitter == 'astropy':
             partest = par.split()
         partest = [float(item) for item in partest]
         partestlist.append(partest)
-    for idx in range(0, nspec):
+    for idx in range(idx, nspec): #used to be: for idx in range(0, nspec)
         pars = partestlist[idx]
         result = gaussbetter(pars, CCFvalues[idx],
                              CCF_rvaxis[idx], CCFerrors[idx])
@@ -247,7 +249,7 @@ elif fitter == 'astropy':
         bestFitModelList.append(bestFitModel)
         rvraw1.append(result.mean_0.value)
         rvraw2.append(result.mean_1.value)
-        cov = result.fit_info['param_cov']
+        #cov = LevMarLSQFitter.fit_info['param_cov']
         parnames = [n for n in result.param_names if n not in ['stddev_0', 'stddev_1']]
         parvals = [v for (n, v) in zip(result.param_names, result.parameters) if n not in ['stddev_0', 'stddev_1']]
         for i, (name, value) in enumerate(zip(parnames, parvals)):
@@ -269,7 +271,7 @@ else:
 with open(outfile, 'w') as f2:
     print('# time [JD], RV1 [km/s], error1 [km/s], RV2 [km/s], error2 [km/s]', file=f2)
     print('#', file=f2)
-    for i in range(1, nspec):
+    for i in range(1, nspec): #used to be: for i in range(1, nspec)
         print ('{0:.9f} {1:.5f} {2:.5f} {3:.5f} {4:.5f}'.format(ccftimesAstropy[i].jd,
                                                                 rvraw1[i],
                                                                 rvraw1_err[i],
