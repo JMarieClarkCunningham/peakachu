@@ -4,7 +4,6 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 from astropy.io import fits
 from astropy.time import Time
-from scipy import optimize
 import gaussfitter as gf
 from astropy.modeling import models, fitting
 '''
@@ -28,22 +27,40 @@ ccfpeakout: a output .txt file created with # columns: [CCFRV1, CCFRV1_err,
 '''
 
 
-#def gaussbetter(model, CCFxaxis, CCFvalues, CCFerrors):
 def gaussbetter(pars, CCFvalues, CCFxaxis, CCFerrors):
     '''
     Fit 2 gaussians to some data, astropy style.
 
-    Unlike gaussparty, this fits one visit at a time. I should finish this docstring.
+    Parameters
+    ----------
+    pars : `list` of `float`
+        Initial guesses for Gaussian parameters.
+        Must be length 6; the order is [amp0, mean0, stddev0, amp1, mean1, stddev1].
+    CCFvalues : `list`
+        y-values for 2-Gaussian data you are trying to fit.
+    CCFxaxis : `list`
+        x-values for 2-Gaussian data you are trying to fit.
+    CCFerrors : `list`
+        Errors corresponding to CCFvalues.
+
+    Returns
+    -------
+    gg_fit : A fitted model
+        Result from applying fitter to an `astropy.modeling.CompoundModel` of two `Gaussian1D`s.
+    fitter : `astropy.modeling.fitting.LevMarLSQFitter`
+        An instantiated fitter object.
     '''
     g1 = models.Gaussian1D(pars[0], pars[1], pars[2], fixed={'stddev': True})
     g2 = models.Gaussian1D(pars[3], pars[4], pars[5], fixed={'stddev': True})
-    # the parameter order is amp, mean (aka position aka RV), stddev
-    # as written, the widths are not fit, and are held fixed at the input values
-    gg_init = g1 + g2
-    fitter = fitting.LevMarLSQFitter()#http://docs.astropy.org/en/stable/api/astropy.modeling.fitting.LevMarLSQFitter.html
-    gg_fit = fitter(gg_init, CCFxaxis, CCFvalues, weights=1./np.array(CCFerrors))     #This fits the combined Gaussians (g1 + g2)
 
-    return gg_fit, fitter #Maybe not having 'fitter' in the return was doin a heckin bamboozle? [JMC^2]
+    gg_init = g1 + g2
+    fitter = fitting.LevMarLSQFitter()
+    # fitter = fitting.SLSQPLSQFitter()  # this one is more robust, but has no covariances
+
+    gg_fit = fitter(gg_init, CCFxaxis, CCFvalues, weights=1./np.array(CCFerrors))
+    # Fits the combined Gaussians (g1 + g2)
+
+    return gg_fit, fitter
 
 
 def gaussparty(gausspars, nspec, CCFvaluelist, CCFxaxis, error_array, ngauss=2,
@@ -53,6 +70,8 @@ def gaussparty(gausspars, nspec, CCFvaluelist, CCFxaxis, error_array, ngauss=2,
                minpars=[0, 0, 0], maxpars=[0, 0, 0]):
     '''
     Fit 2 gaussians to some data.
+
+    This function is old and doesn't work very well. Use gaussbetter instead.
 
     Parameters
     ----------
@@ -120,6 +139,7 @@ def gaussian(x, amp, mu, sig):  # i.e., (xarray, amp, rv, width)
     Handy little gaussian function maker
     '''
     return amp * np.exp(-np.power(x - mu, 2.) / (2 * np.power(sig, 2.)))
+
 
 # THIS IS WHERE YOU CHANGE THINGS
 
@@ -228,78 +248,52 @@ elif fitter == 'astropy':
     width2 = []
     with open(gausspars) as f1:
         for line in f1:
-            if line[0] != '#':              #Skips commented out lines
+            if line[0] != '#':  # Skips commented out lines
                 param.append(line.rstrip())
     assert len(param) == nspec
     partestlist = []
-    for par in param:                       #Skips commented out lines
-        if '#' in par:
+    for par in param:
+        if '#' in par:  # Handles in-line comments
             commentbegin = par.find('#')
             partest = par[0:commentbegin].split()
         else:
             partest = par.split()
         partest = [float(item) for item in partest]
         partestlist.append(partest)
-    for idx in range(idx, nspec):
+    for idx in range(0, nspec):
         pars = partestlist[idx]
-        result = gaussbetter(pars, CCFvalues[idx],
-                             CCF_rvaxis[idx], CCFerrors[idx])
+        result, fitter = gaussbetter(pars, CCFvalues[idx],
+                                     CCF_rvaxis[idx], CCFerrors[idx])
         bestFitModel = result(CCF_rvaxis[idx])
         bestFitModelList.append(bestFitModel)
         rvraw1.append(result.mean_0.value)
         rvraw2.append(result.mean_1.value)
-#        print('rvraw1 = ', rvraw1)     # Why don't these print statements print the thing?! [JMC^2]
-#        print('rvraw2 = ', rvraw2)     # What even are loops? [JMC^2]
-        cov = result.fit_info['param_cov']
-        parnames = [n for n in result.param_names if n not in ['stddev_0', 'stddev_1']]
-        parvals = [v for (n, v) in zip(result.param_names, result.parameters) if n not in ['stddev_0', 'stddev_1']]
-        for i, (name, value) in enumerate(zip(parnames, parvals)):
-            print('{}: {} +/- {}'.format(name, value, np.sqrt(cov[i][i])))
-            #rvraw1_err.append(cov[1][1])
-            #rvraw2_err.append(cov[3][3])
-        # rvraw1_err.append(cov[1][1])  # TODO: get errors on fit parameters
-        # rvraw2_err.append(cov[3][3])  # DONE: Ordering of covariance matrix with tied parameters astropy/issues/4521
-        rvraw1_err.append(0)  # DELETE THIS LATER
-        rvraw2_err.append(0)  # DELETE THIS LATER
+        cov = fitter.fit_info['param_cov']
+        if cov is not None:
+            rvraw1_err.append(cov[1][1])
+            rvraw2_err.append(cov[3][3])
+        else:
+            rvraw1_err.append(0)
+            rvraw2_err.append(0)
         amp1.append(result.amplitude_0.value)
         amp2.append(result.amplitude_1.value)
         width1.append(result.stddev_0.value)
         width2.append(result.stddev_1.value)
-        #print('len(rvraw1) = ', len(rvraw1)) #[JMC^2] Doesn't print anything
-
-
 
 else:
     raise NotImplementedError()
 
-
-#print('len(rvraw1) = ', len(rvraw1)) [JMC^2] Doesn't print anything
-
-# Print fit results to the outfile
+# Print fit results to the outfile (WE ONLY PUT THINGS THAT PRINT TO file=f2 HERE)
 with open(outfile, 'w') as f2:
     print('# time [JD], RV1 [km/s], error1 [km/s], RV2 [km/s], error2 [km/s]', file=f2)
     print('#', file=f2)
-    print(rvraw1)
-    #print(rvraw1_err)
-    #print(rvraw2)
-    #print(rvraw2_err)
-# Print all the things! Find the source of the indexing error [JMC^2]
     for i in range(0, nspec):
-        print('len(rvraw1) = ', len(rvraw1[0])) #[JMC^2] what even is your shape rvraw1 len(rvraw1) = 0, cuuute <(^.^<)
-        #print(ccftimesAstropy[i])
-        #print(rvraw1[i])
-        #print(rvraw1_err[i])
-        #print(rvraw2[i])
-        #print(rvraw2_err[i])
-        #print('{0:.9f} {1:.5f}'.format(ccftimesAstropy[i].jd, rvraw1[i])) #rvraw1[i] appears to be causing indexing error
-#        print ('{0:.9f} {1:.5f} {2:.5f} {3:.5f} {4:.5f}'.format(ccftimesAstropy[i].jd,
-#                                                                rvraw1[i],
-#                                                                rvraw1_err[i],
-#                                                                rvraw2[i],
-#                                                                rvraw2_err[i]), file=f2)
-#print('Time and RVs written to %s.' % outfile)
-print(rvraw1)
-print('Nothing printed, everything is awful') #Dramatic troubleshooting print statement is dramatic
+        print ('{0:.9f} {1:.5f} {2:.5f} {3:.5f} {4:.5f}'.format(ccftimesAstropy[i].jd,
+                                                                rvraw1[i],
+                                                                rvraw1_err[i],
+                                                                rvraw2[i],
+                                                                rvraw2_err[i]), file=f2)
+print('Time and RVs written to %s.' % outfile)
 
 # Plotting time
 fig = plt.figure(1, figsize=(12, 6))
