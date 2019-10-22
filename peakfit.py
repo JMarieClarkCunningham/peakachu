@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 from matplotlib.ticker import MultipleLocator
 from astropy.io import fits
 from astropy.time import Time
+from scipy import optimize
 import gaussfitter as gf
 from astropy.modeling import models, fitting
 '''
@@ -27,19 +28,20 @@ ccfpeakout: a output .txt file created with # columns: [CCFRV1, CCFRV1_err,
 '''
 
 
-def gaussbetter(pars, CCFvalues, CCFxaxis, CCFerrors, ngauss=2):
+#def gaussbetter(model, CCFxaxis, CCFvalues, CCFerrors):
+def gaussbetter(pars, CCFvalues, CCFxaxis, CCFerrors):
     '''
     Fit 2 gaussians to some data, astropy style.
 
     Unlike gaussparty, this fits one visit at a time. I should finish this docstring.
     '''
     g1 = models.Gaussian1D(pars[0], pars[1], pars[2], fixed={'stddev': True})
+    g2 = models.Gaussian1D(pars[3], pars[4], pars[5], fixed={'stddev': True})
     # the parameter order is amp, mean (aka position aka RV), stddev
     # as written, the widths are not fit, and are held fixed at the input values
-    g2 = models.Gaussian1D(pars[3], pars[4], pars[5], fixed={'stddev': True})
     gg_init = g1 + g2
-    fitter = fitting.SLSQPLSQFitter()
-    gg_fit = fitter(gg_init, CCFxaxis, CCFvalues)
+    fitter = fitting.LevMarLSQFitter()                #http://docs.astropy.org/en/stable/api/astropy.modeling.fitting.LevMarLSQFitter.html
+    gg_fit = fitter(gg_init, CCFxaxis, CCFvalues, weights=1./np.array(CCFerrors))     #This fits the combined Gaussians (g1 + g2)
     return gg_fit
 
 
@@ -225,11 +227,11 @@ elif fitter == 'astropy':
     width2 = []
     with open(gausspars) as f1:
         for line in f1:
-            if line[0] != '#':
+            if line[0] != '#':              #Skips commented out lines
                 param.append(line.rstrip())
     assert len(param) == nspec
     partestlist = []
-    for par in param:
+    for par in param:                       #Skips commented out lines
         if '#' in par:
             commentbegin = par.find('#')
             partest = par[0:commentbegin].split()
@@ -240,11 +242,17 @@ elif fitter == 'astropy':
     for idx in range(0, nspec):
         pars = partestlist[idx]
         result = gaussbetter(pars, CCFvalues[idx],
-                             CCF_rvaxis[idx], CCFerrors[idx], ngauss=2)
+                             CCF_rvaxis[idx], CCFerrors[idx])
         bestFitModel = result(CCF_rvaxis[idx])
         bestFitModelList.append(bestFitModel)
         rvraw1.append(result.mean_0.value)
         rvraw2.append(result.mean_1.value)
+        cov = result.fit_info['param_cov']
+        parnames = [n for n in result.param_names if n not in ['stddev_0', 'stddev_1']]
+        parvals = [v for (n, v) in zip(result.param_names, result.parameters) if n not in ['stddev_0', 'stddev_1']]
+        for i, (name, value) in enumerate(zip(parnames, parvals)):
+            print('{}: {} +/- {}'.format(name, value, np.sqrt(cov[i][i])))
+
         # rvraw1_err.append(result.SOMETHING???)  # TODO: get errors on fit parameters
         # rvraw2_err.append(result.SOMETHING???)
         rvraw1_err.append(0)  # DELETE THIS LATER
