@@ -342,4 +342,4 @@ for i in range(0, nspec):
                   frameon=False, handlelength=2, prop={'size': 12})
 
 plt.show()
-plt.savefig(KIC + 'prelim.jpg')
+#plt.savefig(KIC + 'prelim.jpg')
