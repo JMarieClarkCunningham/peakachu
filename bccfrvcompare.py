@@ -1,5 +1,9 @@
 import numpy as np
+from matplotlib import rc
+rc('font',**{'family':'serif','serif':['Times']})
+rc('text', usetex=True)
 import matplotlib.pyplot as plt
+
 
 '''
 Yay! If you've made it this far, you've got some peaks fitted with some gaussians
@@ -67,7 +71,8 @@ apSystemic = 82  ## TODO: FIND ACTUAL SYSTEMIC RV PARAMETER !
 ##  the Solar System
 dateoffset = 2454833.                                  # BJD - dateoffset = JD
                                                        # for Unfolded RV vs time
-
+rv1line = np.isfinite(bf_rv1)
+rv2line = np.isfinite(bf_rv2)
 ##  Doubling the arrays to allow this folded phase functionality [if the arrays
 ##  aren't doubled, we don't have RV information to plot all the way to phase 2]
 
@@ -82,24 +87,26 @@ ccf_rv1_err_double = np.concatenate((ccf_rv1_err,ccf_rv1_err), axis=0)
 ccf_rv2_double = np.concatenate((ccf_rv2,ccf_rv2), axis=0)
 ccf_rv2_err_double = np.concatenate((ccf_rv2_err,ccf_rv2_err), axis=0)
 
-##  Now, let's set up this figure you came for...
+
+
+'''             Now, let's set up this figure you came for...                '''
 fig = plt.figure(1, figsize=(13, 9))
-##  Plot formatting, axis formatting, makin' it look good tho'
-timestart = 1920; timeend = 1990
-RVmin = -20; RVmax = 50
+##  Plot formatting, axis formatting [makin' it look good tho']
+timestart = 1710; timeend = 1990
+RVmin = -30; RVmax = 60
 phasemin = -0.1; phasemax = 1.0
 plt.axis([timestart, timeend, RVmin, RVmax])
 plt.ylabel("Radial Velocity (km s$^{-1}$)")
-rv1line = np.isfinite(bf_rv1)
-rv2line = np.isfinite(bf_rv2)
-
+##  Legend formatting [makin' it look good tho']
+plt.legend(ncol=2, loc=1, numpoints=1, frameon=False, bbox_to_anchor=(1,2.35),
+    columnspacing=0.7)
 ##  Titles for the subplots
 fig.text(0.07, 0.5, 'Radial Velocity (km s$^{-1}$)', ha='center', va='center',
     rotation='vertical', size='large')
 fig.text(0.14, 0.13, 'Folded')
 fig.text(0.14, 0.55, 'Unfolded')
-fig.text(0.14, 0.9, 'BF, CCF RV Comparison: KIC 6864859', size='large')
-
+fig.text(0.45, 0.9, 'KIC 6864859: BF, CCF RV Comparison', size='large')
+#fig.title('BF, CCF RV Comparison: KIC 6864859')
 ##########################  TOP PLOT subplot(2,1,1): ##########################
 #####################  Unfolded RV VS time (BJD-2454833)  #####################
 ax2 = plt.subplot(2,1,1)
@@ -124,20 +131,20 @@ plt.plot(jd-dateoffset, ccf_rv2, color="skyblue", mfc=None, mec=None, lw=1.5,
 ##  Plot the BF RV estimates and their errors
 for idx, date in enumerate(bjd):                         # BJD - dateoffset = JD
     plt.errorbar(date-dateoffset, bf_rv1[idx] - apSystemic, yerr=bf_rv1_err[idx],
-        fmt='ko', color="darkorange", ecolor="darkorange", mfc="darkorange",
-        mec="darkorange", ms=10, lw=1.5, label='BF RV$_{1}$')
+        fmt='ko', color="C0", ecolor="C0", mfc="C0", mec="C0", ms=10, lw=1.5,
+        label='BF RV$_{1}$')
     plt.errorbar(date-dateoffset, bf_rv2[idx] - apSystemic, yerr=bf_rv2_err[idx],
-        fmt='ko', color="darkorange", ecolor="darkorange", mfc="white",
-        mec="darkorange", ms=10, lw=1.5, label='BF RV$_{2}$')
+        fmt='ko', color="C0", ecolor="C0", mfc="white", mec="C0", ms=10, lw=1.5,
+        label='BF RV$_{2}$')
 
 ## Plot the CCF RV estimates and their errors
 for idx, date in enumerate(jd):
     plt.errorbar(date-dateoffset, ccf_rv1[idx], yerr=ccf_rv1_err[idx], fmt='ko',
-        color="dodgerblue", ecolor="dodgerblue", mfc="dodgerblue",
-        mec="dodgerblue", ms=10, lw=1.5, label='CCF RV$_{1}$')
+        color="C1", ecolor="C1", mfc="C1", mec="C1", ms=10, lw=1.5,
+        label='CCF RV$_{1}$')
     plt.errorbar(date-dateoffset, ccf_rv2[idx], yerr=ccf_rv2_err[idx], fmt='ko',
-        color="dodgerblue", ecolor="dodgerblue", mfc="white",
-        mec="dodgerblue", ms=10, lw=1.5, label='CCF RV$_{2}$')
+        color="C1", ecolor="C1", mfc="white", mec="C1", ms=10, lw=1.5,
+        label='CCF RV$_{2}$')
 
 ########################  BOTTOM PLOT subplot(2,1,2): ##########################
 #############################  Folded RV VS Phase   ############################
@@ -154,22 +161,20 @@ plt.tick_params(axis='both', which='major')
 for idx, ph in enumerate(phase_double):
     ##  Plot the Folded BF RV estimates and their errors
     plt.errorbar(phase_double[idx], bf_rv1_double[idx] - apSystemic, yerr=bf_rv1_err_double[idx],
-        marker='o', color="darkorange", mec="darkorange", ecolor="darkorange",
-        mfc="darkorange", ms=10, ls='None', lw=1.5, label='BF RV$_{1}$')
+        marker='o', color="C0", mec="C0", ecolor="C0", mfc="C0", ms=10, ls='None',
+        lw=1.5, label='BF RV$_{1}$')
     plt.errorbar(phase_double[idx], bf_rv2_double[idx] - apSystemic, yerr=bf_rv1_err_double[idx],
-        marker='o', color="darkorange", mec="darkorange", ecolor="darkorange",
-        mfc="white", ms=10, ls='None', lw=1.5, label='BF RV$_{2}$')
+        marker='o', color="C0", mec="C0", ecolor="C0", mfc="white", ms=10,
+        ls='None', lw=1.5, label='BF RV$_{2}$')
 
     ##  Plot the Folded CCF RV estimates and their errors
     plt.errorbar(phase_double[idx], ccf_rv1_double[idx], yerr=ccf_rv1_err_double[idx],
-        marker='o', color="dodgerblue", mec="dodgerblue", ecolor="dodgerblue",
-        mfc="dodgerblue", ms=10, ls='None', lw=1.5, label='CCF RV$_{1}$')
+        marker='o', color="C1", mec="C1", ecolor="C1", mfc="C1", ms=10, ls='None',
+        lw=1.5, label='CCF RV$_{1}$')
     plt.errorbar(phase_double[idx], ccf_rv2_double[idx], yerr=ccf_rv2_err_double[idx],
-        marker='o', color="dodgerblue", mec="dodgerblue", ecolor="dodgerblue",
-        mfc="white", ms=10, ls='None', lw=1.5, label='CCF RV$_{2}$')
+        marker='o', color="C1", mec="C1", ecolor="C1", mfc="white", ms=10,
+        ls='None', lw=1.5, label='CCF RV$_{2}$')
 
 plt.xlabel("Orbital Phase")
-
-
 plt.show()
 #plt.savefig()
