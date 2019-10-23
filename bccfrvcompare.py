@@ -1,8 +1,10 @@
+from __future__ import print_function, division
 import numpy as np
 from matplotlib import rc
 rc('font',**{'family':'serif','serif':['Times']})
 rc('text', usetex=True)
 import matplotlib.pyplot as plt
+from PyAstronomy import pyasl
 
 
 '''
@@ -71,8 +73,9 @@ apSystemic = 82  ## TODO: FIND ACTUAL SYSTEMIC RV PARAMETER !
 ##  the Solar System
 dateoffset = 2454833.                                  # BJD - dateoffset = JD
                                                        # for Unfolded RV vs time
-rv1line = np.isfinite(bf_rv1)
+rv1line = np.isfinite(bf_rv1)                          # for the dotted RV lines
 rv2line = np.isfinite(bf_rv2)
+
 ##  Doubling the arrays to allow this folded phase functionality [if the arrays
 ##  aren't doubled, we don't have RV information to plot all the way to phase 2]
 
@@ -87,26 +90,42 @@ ccf_rv1_err_double = np.concatenate((ccf_rv1_err,ccf_rv1_err), axis=0)
 ccf_rv2_double = np.concatenate((ccf_rv2,ccf_rv2), axis=0)
 ccf_rv2_err_double = np.concatenate((ccf_rv2_err,ccf_rv2_err), axis=0)
 
+##  Let's compute the RV curve (modeled in Cunningham et al. 2019) with the   ##
+##  Keplarian solver keblat, and add it to the second subplot!                ##
+##  RV = gamma + K*(e * cos(w) + cos(omega(t) + w)                            ##
 
+##  We'll need to solve Kepler's equation to turn our timestamps into theta   ##
+##  and omega using pyastronomy:MarkleyKESolver()
+##  First, let us define some constants we will need for RV curve calculation ##
+KIC = '6864859'
+ks = pyasl.MarkleyKESolver()             # Instantiates the keplarian solver
+M = (2*np.pi*phase).any                  # Mean Anomaly [.any troubleshooting MarkleyKESolver]
+e = 0.63462                              # eccentricity (Cunningham et al. 2019)
 
-'''             Now, let's set up this figure you came for...                '''
-fig = plt.figure(1, figsize=(13, 9))
+##  Solves Kepler's Equation for a set of mean anomaly and eccentricity. Uses ##
+##  the algorithm presented by Markley 1995.                                  ##
+print("Eccentric anomaly: ", ks.getE(M, e))
+
+ecosomega = -0.634115                    # ecos(ω) (Cunningham et al. 2019)
+omega = 3.101696                         # Yay! Inverse Trig! √ Working [J=MC^2]
+#K = # velocity semi amplitude
+
+###            Now, let us set up this figure you came for...                ###
+fig = plt.figure(1, figsize=(8, 6))
 ##  Plot formatting, axis formatting [makin' it look good tho']
 timestart = 1710; timeend = 1990
 RVmin = -30; RVmax = 60
-phasemin = -0.1; phasemax = 1.0
+phasemin = 0.1; phasemax = 0.9
 plt.axis([timestart, timeend, RVmin, RVmax])
-plt.ylabel("Radial Velocity (km s$^{-1}$)")
-##  Legend formatting [makin' it look good tho']
-plt.legend(ncol=2, loc=1, numpoints=1, frameon=False, bbox_to_anchor=(1,2.35),
-    columnspacing=0.7)
+plt.ylabel("Radial Velocity (km s$^{-1}$)", size='large')
+
 ##  Titles for the subplots
 fig.text(0.07, 0.5, 'Radial Velocity (km s$^{-1}$)', ha='center', va='center',
     rotation='vertical', size='large')
 fig.text(0.14, 0.13, 'Folded')
 fig.text(0.14, 0.55, 'Unfolded')
-fig.text(0.45, 0.9, 'KIC 6864859: BF, CCF RV Comparison', size='large')
-#fig.title('BF, CCF RV Comparison: KIC 6864859')
+fig.text(0.45, 0.9, 'KIC 6864859', size='large')
+
 ##########################  TOP PLOT subplot(2,1,1): ##########################
 #####################  Unfolded RV VS time (BJD-2454833)  #####################
 ax2 = plt.subplot(2,1,1)
@@ -131,19 +150,19 @@ plt.plot(jd-dateoffset, ccf_rv2, color="skyblue", mfc=None, mec=None, lw=1.5,
 ##  Plot the BF RV estimates and their errors
 for idx, date in enumerate(bjd):                         # BJD - dateoffset = JD
     plt.errorbar(date-dateoffset, bf_rv1[idx] - apSystemic, yerr=bf_rv1_err[idx],
-        fmt='ko', color="C0", ecolor="C0", mfc="C0", mec="C0", ms=10, lw=1.5,
+        fmt='ko', color="C0", ecolor="C0", mfc="C0", mec="C0", ms=8, lw=1.5,
         label='BF RV$_{1}$')
     plt.errorbar(date-dateoffset, bf_rv2[idx] - apSystemic, yerr=bf_rv2_err[idx],
-        fmt='ko', color="C0", ecolor="C0", mfc="white", mec="C0", ms=10, lw=1.5,
+        fmt='ko', color="C0", ecolor="C0", mfc="white", mec="C0", ms=8, lw=1.5,
         label='BF RV$_{2}$')
 
 ## Plot the CCF RV estimates and their errors
 for idx, date in enumerate(jd):
     plt.errorbar(date-dateoffset, ccf_rv1[idx], yerr=ccf_rv1_err[idx], fmt='ko',
-        color="C1", ecolor="C1", mfc="C1", mec="C1", ms=10, lw=1.5,
+        color="C1", ecolor="C1", mfc="C1", mec="C1", ms=8, lw=1.5,
         label='CCF RV$_{1}$')
     plt.errorbar(date-dateoffset, ccf_rv2[idx], yerr=ccf_rv2_err[idx], fmt='ko',
-        color="C1", ecolor="C1", mfc="white", mec="C1", ms=10, lw=1.5,
+        color="C1", ecolor="C1", mfc="white", mec="C1", ms=8, lw=1.5,
         label='CCF RV$_{2}$')
 
 ########################  BOTTOM PLOT subplot(2,1,2): ##########################
@@ -161,20 +180,26 @@ plt.tick_params(axis='both', which='major')
 for idx, ph in enumerate(phase_double):
     ##  Plot the Folded BF RV estimates and their errors
     plt.errorbar(phase_double[idx], bf_rv1_double[idx] - apSystemic, yerr=bf_rv1_err_double[idx],
-        marker='o', color="C0", mec="C0", ecolor="C0", mfc="C0", ms=10, ls='None',
+        marker='o', color="C1", mec="C1", ecolor="C1", mfc="C1", ms=8, ls='None',
         lw=1.5, label='BF RV$_{1}$')
     plt.errorbar(phase_double[idx], bf_rv2_double[idx] - apSystemic, yerr=bf_rv1_err_double[idx],
-        marker='o', color="C0", mec="C0", ecolor="C0", mfc="white", ms=10,
+        marker='o', color="C1", mec="C1", ecolor="C1", mfc="white", ms=8,
         ls='None', lw=1.5, label='BF RV$_{2}$')
 
     ##  Plot the Folded CCF RV estimates and their errors
     plt.errorbar(phase_double[idx], ccf_rv1_double[idx], yerr=ccf_rv1_err_double[idx],
-        marker='o', color="C1", mec="C1", ecolor="C1", mfc="C1", ms=10, ls='None',
+        marker='o', color="C0", mec="C0", ecolor="C0", mfc="C0", ms=8, ls='None',
         lw=1.5, label='CCF RV$_{1}$')
     plt.errorbar(phase_double[idx], ccf_rv2_double[idx], yerr=ccf_rv2_err_double[idx],
-        marker='o', color="C1", mec="C1", ecolor="C1", mfc="white", ms=10,
+        marker='o', color="C0", mec="C0", ecolor="C0", mfc="white", ms=8,
         ls='None', lw=1.5, label='CCF RV$_{2}$')
+    ##  MNake a legend
+    if idx == 0:
+        plt.legend(ncol=2, loc=1, numpoints=1, frameon=False, bbox_to_anchor=(1,2.35),
+            columnspacing=0.7)
+plt.xlabel("Orbital Phase", size='large')
 
-plt.xlabel("Orbital Phase")
+##  Legend formatting [makin' it look good tho']
+
 plt.show()
-#plt.savefig()
+#plt.savefig('6864859BFCCFRV.png')
