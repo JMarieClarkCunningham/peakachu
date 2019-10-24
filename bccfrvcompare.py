@@ -5,6 +5,7 @@ rc('font',**{'family':'serif','serif':['Times']})
 rc('text', usetex=True)
 import matplotlib.pyplot as plt
 from PyAstronomy import pyasl
+#sys.path.append('/peakachu/keplarRV.py')
 from keplarRV import getkepRV
 
 '''
@@ -82,10 +83,12 @@ K = -93945.5
 ecc = 0.63462
 omega = 3.101696
 keplercurve = getkepRV(synphases, ecc, omega, gamma, K)
-print(keplercurve)
+synRV = np.divide(keplercurve, 1000)
+print(synRV)
 ##  Doubling the arrays to allow this folded phase functionality [if the arrays
 ##  aren't doubled, we don't have RV information to plot all the way to phase 2]
-
+synRV_double = np.concatenate((synRV,synRV), axis=0)
+synphases_double = np.concatenate((synphases,synphases), axis=0)
 phase_double = np.concatenate((np.array(phases),np.array(phases)+1.0), axis=0)
 bf_rv1_double = np.concatenate((bf_rv1,bf_rv1), axis=0)
 bf_rv1_err_double = np.concatenate((bf_rv1_err,bf_rv1_err), axis=0)
@@ -166,6 +169,8 @@ ax1.xaxis.set_ticks_position('bottom')
 ax1.yaxis.set_ticks_position('left')
 plt.tick_params(axis='both', which='major')
 
+plt.plot(synphases_double, synRV_double, marker='', color='C4',
+    ls='-', lw='1.5')#, label='Keplarian Projected RV')
 ##  Loop through the enumerated doubled phase array and plot BF and CCF RVs
 ##  This is why the arrays were doubled, lines 69 - 81
 for idx, ph in enumerate(phase_double):
@@ -189,6 +194,9 @@ for idx, ph in enumerate(phase_double):
         plt.legend(ncol=2, loc=1, numpoints=1, frameon=False, bbox_to_anchor=(1,2.35),
             columnspacing=0.7)
 
-
 plt.xlabel("Orbital Phase", size='large')
+plt.show()
+
+plt.plot(synphases_double, synRV_double, marker='', color='C4',
+    ls='-', lw='1.5')
 plt.show()
