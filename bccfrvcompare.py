@@ -13,6 +13,33 @@ maybe even have errors on those gaussians, and now, you're looking to plot some
 RVs. Well, here's lookin at you kid, cause this here program, it does just that!
 '''
 
+def RVcurve(gamma=6.54, K=93945.5, e = 0.63462, omega=3.101696, phase):
+    '''
+    This function calculates synthetic radial velocity curves using the form:
+    RV = gamma + K * (e * cos(w) + cos(theta(t) + w)
+                                   Parameters:
+    __________________________________________________________________________
+    omega : `int`
+      Argument of periapsis [degrees]
+    K :  `int`
+    e : `int`
+      eccentricity of the system
+    phases : `list`
+      2D list with phases of the system
+    '''
+    twopi = 2 * np.pi
+    kepRVcurve = []
+    ks = pyasl.MarkleyKESolver()                # Instantiates the keplarian solver
+    for idx, phase in enumerate(phases):
+        metaM = twopi * phase[idx]
+        EccAnom = ks.getE(M, e)                 # Eccentric anomaly
+        TruAnom = np.arctan2((cos(EccAnom - e)), (np.sqrt(1-e^2) * np.sin(EccAnom)))
+        kepRV = gamma + K * (e * np.cos( omega ) + np.cos( TruAnom[i] + omega ))
+        kepRVcurve.append(kepRV)
+        print(kepRVcurve)
+    return(kepRVcurve)
+
+
 ##  Let's read in fit estimates (RV estimates) from peakfit.py [CCF RVs]      ##
 ##     _____________________________________________________________          ##
 ##     [0]:Date (JD), [1]:RV 1, [2]:RV 1 err, [3]:RV 1, [4]:RV 1 err          ##
@@ -90,52 +117,14 @@ ccf_rv1_err_double = np.concatenate((ccf_rv1_err,ccf_rv1_err), axis=0)
 ccf_rv2_double = np.concatenate((ccf_rv2,ccf_rv2), axis=0)
 ccf_rv2_err_double = np.concatenate((ccf_rv2_err,ccf_rv2_err), axis=0)
 
-##  Let's compute the RV curve (modeled in Cunningham et al. 2019) with the   ##
-##  Keplarian solver keblat, and add it to the second subplot!                ##
-##  RV = gamma + K*(e * cos(theta) + cos(omega(t) + theta)                            ##
-
-##  We'll need to solve Kepler's equation to turn our timestamps into theta   ##
-##  and omega using pyastronomy:MarkleyKESolver()
-##  First, let us define some constants we will need for RV curve calculation ##
-
-##  Solves Kepler's Equation for a set of mean anomaly and eccentricity. Uses ##
-##  the algorithm presented by Markley 1995.                                  ##
-##  print("Eccentric anomaly:", ks.getE(M, e))
-##  Eccentric anomaly:  3.644040476577252
-
-
 ##  NOW WE'RE COOKIN' WITH GREASE!! LET'S FRY UP AN RV CURVE HONEY!!!!
-def RVcurve(gamma, K, e, omega, phase):
-    '''
-    This function calculates synthetic radial velocity curves using the form:
-    RV = gamma + K * (e * cos(w) + cos(theta(t) + w)
-                                   Parameters:
-    __________________________________________________________________________
-    omega : `int`
-      Argument of periapsis [degrees]
-    K :  `int`
-    e : `int`
-      eccentricity of the system
-    phases : `list`
-      2D list with phases of the system
-    '''
-    kepRVcurve = []
-    ecosomega = -0.634115                       # ecos(v0) (Cunningham et al. 2019)
-    omega = 3.101696                            # Yay! Inverse Trig! √ Working [J=MC^2]
-    K = -93945.5 # ; K_err = 142.6              # K is neg velocity semi amplitude
-    gamma = 6.54
-    ks = pyasl.MarkleyKESolver()                # Instantiates the keplarian solver
-    e = 0.63462                                 # eccentricity (Cunningham et al. 2019)
-    for i in range(0, phases):
-        M = 2 * np.pi * phase
-        EccAnom = ks.getE(M, e)                 # Eccentric anomaly
-        TruAnom[i] = np.atan2((cos(EccAnom - e)), (np.sqrt(1-e^2) * np.sin(EccAnom)))
-        kepRV = gamma + K * (e * np.cos( omega ) + np.cos( TruAnom[i] + omega ))
-        kepRVcurve.append(kepRV)
-        print(KepRVcurve)
-    return(KepRVcurve)
+omega = 3.101696                            # Yay! Inverse Trig! √ Working [J=MC^2]
+K = -93945.5 # ; K_err = 142.6              # K is neg velocity semi amplitude
+gamma = 6.54
+e = 0.63462                                 # eccentricity (Cunningham et al. 2019)
 
-print(KepRVcurve)
+for phase in phases:
+    KeplerRVCurve = RVcurve(gamma, K, e, omega, phase)
 ###            Now, let us set up this figure you came for...                ###
 fig = plt.figure(1, figsize=(8, 6))
 ##  Plot formatting, axis formatting [makin' it look good tho']
