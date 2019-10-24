@@ -5,40 +5,13 @@ rc('font',**{'family':'serif','serif':['Times']})
 rc('text', usetex=True)
 import matplotlib.pyplot as plt
 from PyAstronomy import pyasl
-
+from keplarRV import getkepRV
 
 '''
 Yay! If you've made it this far, you've got some peaks fitted with some gaussians
 maybe even have errors on those gaussians, and now, you're looking to plot some
 RVs. Well, here's lookin at you kid, cause this here program, it does just that!
 '''
-
-def RVcurve(gamma=6.54, K=93945.5, e = 0.63462, omega=3.101696, phase):
-    '''
-    This function calculates synthetic radial velocity curves using the form:
-    RV = gamma + K * (e * cos(w) + cos(theta(t) + w)
-                                   Parameters:
-    __________________________________________________________________________
-    omega : `int`
-      Argument of periapsis [degrees]
-    K :  `int`
-    e : `int`
-      eccentricity of the system
-    phases : `list`
-      2D list with phases of the system
-    '''
-    twopi = 2 * np.pi
-    kepRVcurve = []
-    ks = pyasl.MarkleyKESolver()                # Instantiates the keplarian solver
-    for idx, phase in enumerate(phases):
-        metaM = twopi * phase[idx]
-        EccAnom = ks.getE(M, e)                 # Eccentric anomaly
-        TruAnom = np.arctan2((cos(EccAnom - e)), (np.sqrt(1-e^2) * np.sin(EccAnom)))
-        kepRV = gamma + K * (e * np.cos( omega ) + np.cos( TruAnom[i] + omega ))
-        kepRVcurve.append(kepRV)
-        print(kepRVcurve)
-    return(kepRVcurve)
-
 
 ##  Let's read in fit estimates (RV estimates) from peakfit.py [CCF RVs]      ##
 ##     _____________________________________________________________          ##
@@ -103,6 +76,13 @@ dateoffset = 2454833.                                  # BJD - dateoffset = JD
 rv1line = np.isfinite(bf_rv1)                          # for the dotted RV lines
 rv2line = np.isfinite(bf_rv2)
 
+synphases = np.arange(0, 1, 0.001)           # Array from 0 to 1 in 0.001 step size
+gamma = 6.54                                 # Keblat (Windemuth et al. 2019)
+K = -93945.5
+ecc = 0.63462
+omega = 3.101696
+keplercurve = getkepRV(synphases, ecc, omega, gamma, K)
+print(keplercurve)
 ##  Doubling the arrays to allow this folded phase functionality [if the arrays
 ##  aren't doubled, we don't have RV information to plot all the way to phase 2]
 
@@ -117,14 +97,7 @@ ccf_rv1_err_double = np.concatenate((ccf_rv1_err,ccf_rv1_err), axis=0)
 ccf_rv2_double = np.concatenate((ccf_rv2,ccf_rv2), axis=0)
 ccf_rv2_err_double = np.concatenate((ccf_rv2_err,ccf_rv2_err), axis=0)
 
-##  NOW WE'RE COOKIN' WITH GREASE!! LET'S FRY UP AN RV CURVE HONEY!!!!
-omega = 3.101696                            # Yay! Inverse Trig! √ Working [J=MC^2]
-K = -93945.5 # ; K_err = 142.6              # K is neg velocity semi amplitude
-gamma = 6.54
-e = 0.63462                                 # eccentricity (Cunningham et al. 2019)
 
-for phase in phases:
-    KeplerRVCurve = RVcurve(gamma, K, e, omega, phase)
 ###            Now, let us set up this figure you came for...                ###
 fig = plt.figure(1, figsize=(8, 6))
 ##  Plot formatting, axis formatting [makin' it look good tho']
@@ -153,31 +126,34 @@ plt.tick_params(axis='both', which='major')
 plt.xlabel("Time (BJD -- {0:.0f})".format(dateoffset))
 
 ##  Dotted lines for both CCF and BF RV curve
-plt.plot(bjd[rv1line]-dateoffset, bf_rv1[rv1line] - apSystemic, color="orange",
+
+plt.plot(bjd[rv1line]-dateoffset, bf_rv1[rv1line] - apSystemic, color="C1",
     mfc=None, mec=None, lw=1.5, ls=':')
-plt.plot(bjd[rv2line]-dateoffset, bf_rv2[rv2line] - apSystemic, color="orange",
+plt.plot(bjd[rv2line]-dateoffset, bf_rv2[rv2line] - apSystemic, color="C1",
     mfc=None, mec=None, lw=1.5, ls=':')
-plt.plot(jd-dateoffset, ccf_rv1, color="skyblue", mfc=None, mec=None, lw=1.5,
+
+plt.plot(jd-dateoffset, ccf_rv1, color="C0", mfc=None, mec=None, lw=1.5,
     ls=':')
-plt.plot(jd-dateoffset, ccf_rv2, color="skyblue", mfc=None, mec=None, lw=1.5,
+plt.plot(jd-dateoffset, ccf_rv2, color="C0", mfc=None, mec=None, lw=1.5,
     ls=':')
 
 ##  Plot the BF RV estimates and their errors
+##  color = 'C1' ORANGE IS THE BF RV
 for idx, date in enumerate(bjd):                         # BJD - dateoffset = JD
     plt.errorbar(date-dateoffset, bf_rv1[idx] - apSystemic, yerr=bf_rv1_err[idx],
-        fmt='ko', color="C0", ecolor="C0", mfc="C0", mec="C0", ms=8, lw=1.5,
+        fmt='ko', color="C1", ecolor="C1", mfc="C1", mec="C1", ms=8, lw=1.5,
         label='BF RV$_{1}$')
     plt.errorbar(date-dateoffset, bf_rv2[idx] - apSystemic, yerr=bf_rv2_err[idx],
-        fmt='ko', color="C0", ecolor="C0", mfc="white", mec="C0", ms=8, lw=1.5,
+        fmt='ko', color="C1", ecolor="C1", mfc="white", mec="C1", ms=8, lw=1.5,
         label='BF RV$_{2}$')
 
 ## Plot the CCF RV estimates and their errors
 for idx, date in enumerate(jd):
     plt.errorbar(date-dateoffset, ccf_rv1[idx], yerr=ccf_rv1_err[idx], fmt='ko',
-        color="C1", ecolor="C1", mfc="C1", mec="C1", ms=8, lw=1.5,
+        color="C0", ecolor="C0", mfc="C0", mec="C0", ms=8, lw=1.5,
         label='CCF RV$_{1}$')
     plt.errorbar(date-dateoffset, ccf_rv2[idx], yerr=ccf_rv2_err[idx], fmt='ko',
-        color="C1", ecolor="C1", mfc="white", mec="C1", ms=8, lw=1.5,
+        color="C0", ecolor="C0", mfc="white", mec="C0", ms=8, lw=1.5,
         label='CCF RV$_{2}$')
 
 ########################  BOTTOM PLOT subplot(2,1,2): ##########################
@@ -193,7 +169,7 @@ plt.tick_params(axis='both', which='major')
 ##  Loop through the enumerated doubled phase array and plot BF and CCF RVs
 ##  This is why the arrays were doubled, lines 69 - 81
 for idx, ph in enumerate(phase_double):
-    ##  Plot the Folded BF RV estimates and their errors
+    ##  Plot the Folded BF RV estimates and their errors [[color='C1' ORANGE FOR BF]]
     plt.errorbar(phase_double[idx], bf_rv1_double[idx] - apSystemic, yerr=bf_rv1_err_double[idx],
         marker='o', color="C1", mec="C1", ecolor="C1", mfc="C1", ms=8, ls='None',
         lw=1.5, label='BF RV$_{1}$')
@@ -201,20 +177,18 @@ for idx, ph in enumerate(phase_double):
         marker='o', color="C1", mec="C1", ecolor="C1", mfc="white", ms=8,
         ls='None', lw=1.5, label='BF RV$_{2}$')
 
-    ##  Plot the Folded CCF RV estimates and their errors
+    ##  Plot the Folded CCF RV estimates and their errors [[color='C0' BLUE FOR CCF]]
     plt.errorbar(phase_double[idx], ccf_rv1_double[idx], yerr=ccf_rv1_err_double[idx],
         marker='o', color="C0", mec="C0", ecolor="C0", mfc="C0", ms=8, ls='None',
         lw=1.5, label='CCF RV$_{1}$')
     plt.errorbar(phase_double[idx], ccf_rv2_double[idx], yerr=ccf_rv2_err_double[idx],
         marker='o', color="C0", mec="C0", ecolor="C0", mfc="white", ms=8,
         ls='None', lw=1.5, label='CCF RV$_{2}$')
-    ##  MNake a legend
+    ##  Make a legend
     if idx == 0:
         plt.legend(ncol=2, loc=1, numpoints=1, frameon=False, bbox_to_anchor=(1,2.35),
             columnspacing=0.7)
+
+
 plt.xlabel("Orbital Phase", size='large')
-
-##  Legend formatting [makin' it look good tho']
-
 plt.show()
-#plt.savefig('6864859BFCCFRV.png')
