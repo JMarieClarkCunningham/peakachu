@@ -31,15 +31,13 @@ def getkepRV(phases, ecc, omega, gamma, K):
 ##  of phase [M_ph], the eccentric anomaly E_ph, and the True anomaly, Tru, or
 ##  theta, the missing piece of the RV curve calculation
     for phase in phases:                          # Loop over phases
-        #system = gamma + K * (ecc * np.cos(omega))  # THIS NEEDS TO HAPPEN LAST
-
         MeAn = 2. * np.pi * phase                 # Solve for mean anomaly, M(phase)
         EcAn = ks.getE(MeAn, ecc)                   # Solve for eccentric anomaly, E
-        TruTop = (np.cos( EcAn - ecc ))             # Find the denominator of arctan2
-        TruBot = ((np.sqrt(1 - ecc*ecc)) * np.sin(EcAn))    # Find the numerator of arctan2
-        Tru = np.arctan2(TruTop, TruBot)          # Solve for true anomaly, Tru
-        costhetaplusomega = np.cos(Tru + omega)
-        #theta.append(Tru)                         # theta is the true anomaly  NOT NEEDED
+
+        # Compute the true anomaly
+        cosTru = (np.cos(EcAn) - ecc) / (1 - ecc*np.cos(EcAn))
+        sinTru = (np.sqrt(1 - ecc**2) * np.sin(EcAn)) / (1 - ecc*np.cos(EcAn))
+        Tru = np.arctan2(sinTru, cosTru)
 
         RV = gamma + K * (ecc * np.cos(omega) + np.cos(Tru + omega))
 
