@@ -77,14 +77,22 @@ dateoffset = 2454833.                                  # BJD - dateoffset = JD
 rv1line = np.isfinite(bf_rv1)                          # for the dotted RV lines
 rv2line = np.isfinite(bf_rv2)
 
-synphases = np.arange(0, 1, 0.001)           # Array from 0 to 1 in 0.001 step size
-gamma = 6.54                                 # Keblat (Windemuth et al. 2019)
-K = -93945.5
+synphases = np.arange(0, 1, 0.01)           # Array from 0 to 1 in 0.01 step size  I DECIDED 0.001 WAS OVERKILL
+#gamma = 6.54                               # Keblat (Windemuth et al. 2019) NONONO WRONG
+gamma = 93.9455  # YOU HAD THIS IN M/S I FIXED IT TO KM/S, AND ALSO THIS IS GAMMA NOT K (DIANA CALLS IT K0)
+K = 20  # I MADE THIS UP YOU NEED TO FIND THE RIGHT VALUE
 ecc = 0.63462
-omega = 3.101696
+#omega = 3.101696  # I DON'T BELIEVE THIS, I SUGGEST COMPUTING IT HERE FROM ECOSW AND ESINW
+esinw = -0.0254
+ecosw = -0.634115
+sinw = esinw / ecc
+cosw = ecosw / ecc
+print(np.arccos(cosw), np.arcsin(sinw))  # THESE ARE NOT THE SAME, IT'S TRIG O'CLOCK, FIGURE OUT WHAT'S GOING ON
+omega = 0  # THIS IS JUST ME TESTING THINGS
 keplercurve = getkepRV(synphases, ecc, omega, gamma, K)
-synRV = np.divide(keplercurve, 1000)
-print(synRV)
+#synRV = np.divide(keplercurve, 1000)  # WHY??
+synRV = keplercurve
+#print(synRV)
 ##  Doubling the arrays to allow this folded phase functionality [if the arrays
 ##  aren't doubled, we don't have RV information to plot all the way to phase 2]
 synRV_double = np.concatenate((synRV,synRV), axis=0)
