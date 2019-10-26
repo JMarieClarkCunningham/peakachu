@@ -2,6 +2,8 @@ from __future__ import print_function, division
 import numpy as np
 from matplotlib import rc
 from PyAstronomy import pyasl
+from astropy import constants as const
+from astropy import units as u
 '''
 This function calculates synthetic radial velocity curves using the form:
 RV = gamma + K * (e * cos(w) + cos(theta(t) + w)), Keplarian MarkleyKESolver
@@ -47,3 +49,40 @@ def getkepRV(phases, ecc, omega, gamma, K):
         KepRVCurve.append(RV)               # add RV curve to the empty list
 
     return KepRVCurve
+
+def getK(Porb, M1, M2, incl, ecc):
+    '''
+    Original version by Joni is in comments,
+    Slightly condensed edits by Meredith appear as-is
+    '''
+#     M1_app = M1.to(u.kg) + M2.to(u.kg)
+#     P_orb = Porb.to(u.second)
+#     twopiG = 2. * cons.pi * cons.G
+#     twopiGoverP = np.divide(twopiG, P_orb)
+#     part_1 = twopiGoverP**(1/3)
+#     M2sin_i = M2.to(u.kg) * np.sin(incl.to(u.deg))
+#     M1pow2third = (M1.to(u.kg) + M2.to(u.kg))**(2/3)
+#     part_2 = M2sin_i / M1pow2third
+#     part_a = part_1 * part_2
+#     part_n = np.sqrt(1 - ecc**2)
+#     part_3 = 1 / part_n
+# 
+#     K = np.multiply(part_a, part_3)
+#     return(K)
+
+    twopiG = 2. * np.pi * const.G
+    twopiGoverP = np.divide(twopiG, Porb)
+    part_1 = twopiGoverP**(1/3)
+
+    M2sin_i = M2 * np.sin(incl)
+    M1pow2third = (M1 + M2)**(2/3)
+    part_2 = M2sin_i / M1pow2third
+    
+    part_3 = 1. / np.sqrt(1 - ecc**2)
+
+    K = np.multiply(part_1*part_2, part_3)
+    
+    # ALL IN ONE LINE MWAHAHA -MR
+    K1_calc = ((2*np.pi*const.G / Porb)**(1/3)) * ((M2*np.sin(incl)) / (M1+M2)**(2/3)) * (1/np.sqrt(1 - ecc**2))
+
+    return K
